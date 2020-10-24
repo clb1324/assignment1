@@ -1,4 +1,4 @@
-audubon.data <- read.csv("/users/christinabi/desktop/audubon_data.csv", header=TRUE, sep=",", na.strings="NA")
+audubon.data <- read.csv("audubon_data.csv", header=TRUE, sep=",", na.strings="NA")
 audubon.data[audubon.data=="N/A"] <- NA
 audubon.data[audubon.data==""] <- NA
 audubon.data$Date <- as.Date(audubon.data$Date, format="%m/%d/%y")
@@ -13,8 +13,9 @@ audubon.data.final <- subset(audubon.data, Survey_Type=="transect")
 audubon.data.final <- subset(audubon.data.final, Date>= "2010-01-01")
 audubon.data.final <- audubon.data.final[,c("Longitude", "Latitude", "Date", "Survey_Type")]
 
-gw.data <- read.csv("/users/christinabi/desktop/gw_data_mac.csv", header=TRUE, sep=",", na.strings="NA")
+gw.data <- read.csv("gw_data_mac.csv", header=TRUE, sep=",", na.strings="NA")
 gw.data$Date <- as.Date(gw.data$Date, format="%d-%b-%y")
+gw.data$Survey_Type[grep("non", gw.data$Survey_Type, ignore.case=TRUE)] <- "NA"
 gw.data$Survey_Type[grep("trans", gw.data$Survey_Type, ignore.case=TRUE)] <- "transect"
 list1 <- strsplit(gw.data$Longitude, "°")
 longitude <- data.frame(degrees=sapply(list1, "[[", 1),
@@ -36,10 +37,12 @@ gw.data.final <- subset(gw.data, Date>= "2010-01-01")
 gw.data.final <- subset(gw.data.final, Survey_Type=="transect")
 gw.data.final <- gw.data.final[,c("Longitude", "Latitude", "Date", "Survey_Type")]
 
-natgeo.data <- read.csv("/users/christinabi/desktop/nat_geo_data.csv", header=TRUE, sep=",", na.strings="NA")
+natgeo.data <- read.csv("nat_geo_data.csv", header=TRUE, sep=",", na.strings="NA")
+natgeo.data$Survey_Type[grep("non", natgeo.data$Survey_Type, ignore.case=TRUE)] <- "NA"
 natgeo.data$Survey_Type[grep("trans", natgeo.data$Survey_Type, ignore.case=TRUE)] <- "transect"
-natgeo.data$Date <- as.Date(natgeo.data$Date, format="%Y-%m-%d")
-natgeo.data.final <- subset(natgeo.data, Date>= "2010-01-01")
+natgeo.data.noantarctica <- subset(natgeo.data, Longitude<=0)
+natgeo.data.noantarctica$Date <- as.Date(natgeo.data.noantarctica$Date, format="%Y-%m-%d")
+natgeo.data.final <- subset(natgeo.data.noantarctica, Date>= "2010-01-01")
 natgeo.data.final <- subset(natgeo.data.final, Survey_Type=="transect")
 natgeo.data.final <- natgeo.data.final[,c("Longitude", "Latitude", "Date", "Survey_Type")]
 
@@ -47,3 +50,24 @@ clean_data <-rbind(audubon.data.final, gw.data.final, natgeo.data.final)
 row.names(clean_data) <- 1:nrow(clean_data)
 
 write.csv(clean_data, file = "my_clean_data.csv", row.names = FALSE)
+
+library(sp)
+library(rgdal)
+clean_data <- read.csv("my_clean_data.csv")
+plotting_data <- SpatialPoints(clean_data[, c("Longitude", "Latitude")])
+dc <- readOGR("Neighborhood_Clusters-shp", "Neighborhood_Clusters")
+par(mar = c(1, 1, 1, 1))
+plot(
+  dc,
+  col = "darkgrey",
+  border = "white",
+  main = "District of Columbia Bird Sightings"
+)
+plot(dc[46, ],
+     add = TRUE,
+     col = "#718BAE80",
+     border = "white")
+plot(plotting_data,
+     add = TRUE,
+     pch = 16,
+     cex = 0.25)
